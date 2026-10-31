@@ -1,11 +1,12 @@
-# Publishing a tag such as v0.2.0 builds the installers (with FFmpeg embedded) and attaches them to
-# one draft GitHub release. "Run workflow" (manual) does a dry run: builds and checks the installers,
+# Publishing a tag such as v0.2.0, or pushing to the `release` branch (the version comes from
+# package.json), builds the installers (with FFmpeg embedded) and attaches them to one draft GitHub release. "Run workflow" (manual) does a dry run: builds and checks the installers,
 # uploads them as workflow artifacts, publishes nothing.
 name: Release
 
 on:
   push:
     tags: ['v*']
+    branches: ['release']
   workflow_dispatch:
 
 permissions:
@@ -15,16 +16,17 @@ jobs:
   # Create the draft first so the macOS and Windows builds upload to the same release
   # (otherwise each build may create its own draft).
   draft:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Create the draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
         run: |
+          TAG="v$(node -p "require('./package.json').version")"
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "${TAG#v}" \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "${TAG#v}" \
               --notes "Installateurs MixLab ${TAG#v} (FFmpeg inclus)."
 
   build:
@@ -63,7 +65,7 @@ jobs:
       - run: npm run build
       - name: Build installers
         shell: bash
-        run: npx electron-builder --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: npx electron-builder --publish ${{ (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/release') && 'always' || 'never' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Check the packaged app runs its embedded FFmpeg
