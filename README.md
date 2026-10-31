@@ -64,6 +64,10 @@ Privacy & Security** and click **Open Anyway**. On Windows, SmartScreen may show
   background with progress and clean cancellation.
 - **Projects** — several mixtapes per project; moved or renamed files are found again by content fingerprint.
 
+## YouTube Music (this fork)
+
+This fork adds a **YouTube Music** source: browse your liked songs, playlists or the catalogue, tick tracks, and MixLab fetches them as `.m4a` files (256 kb/s AAC with Premium) that are analysed and mixed like local files. It uses [ytmusicapi](https://github.com/sigma67/ytmusicapi) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), installed into a private Python environment on first use (Python ≥ 3.10 required), and authenticates with request headers copied from a logged-in music.youtube.com tab. **Personal use only**: downloading from YouTube is against its terms of service. Full instructions (in French) in [README.fr.md](README.fr.md#youtube-music-ce-fork).
+
 ## Build from source
 
 Requirements: Node.js ≥ 22 and FFmpeg (macOS: `brew install node ffmpeg`, Windows: `winget install OpenJS.NodeJS FFmpeg`).

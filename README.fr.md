@@ -75,6 +75,23 @@ Pour embarquer FFmpeg comme dans les versions publiées, lancez d'abord `npm run
 7. **Exporter** : MP3 192/256/320 kb/s ou WAV 24 bits, avec métadonnées, chapitres ID3 par morceau et fiche `.cue` en option. Le rendu tourne en arrière-plan, avec progression et annulation propre ; aucun fichier partiel n'est laissé.
 8. **Projets** (`.mixlab`) : plusieurs mixtapes par projet, avec l'ordre, les transitions, les points de début et de fin, les gains, les réglages de tempo et les corrections. Si des fichiers ont été déplacés, « Rechercher… » les retrouve par empreinte de contenu, même renommés.
 
+## YouTube Music (ce fork)
+
+Ce fork ajoute une source **YouTube Music** : on parcourt ses titres likés, ses playlists ou le catalogue, on coche des morceaux, et MixLab les récupère en `.m4a` (AAC 256 kb/s avec un compte Premium, 128 kb/s sinon) puis les analyse et les mixe comme des fichiers locaux.
+
+> **Usage personnel uniquement.** La récupération passe par [yt-dlp](https://github.com/yt-dlp/yt-dlp) et la lecture de la bibliothèque par [ytmusicapi](https://github.com/sigma67/ytmusicapi), deux outils non officiels. Télécharger depuis YouTube est contraire à ses conditions d'utilisation : le risque principal est une restriction du compte. Ne partagez ni les fichiers récupérés ni les mixes qui en contiennent.
+
+**Prérequis** : Python 3.10 ou plus récent (macOS : `brew install python`, Windows : `winget install Python.Python.3.12`).
+
+1. Bouton YouTube Music dans la bibliothèque, ou **Fichier → Importer depuis YouTube Music…** (⇧⌘I).
+2. **Installer** : MixLab crée un environnement Python privé (`ytmusic/venv` dans le dossier de données de l'application) et y installe ytmusicapi, yt-dlp et deno (moteur JavaScript dont yt-dlp a besoin pour YouTube). Environ 60 Mo, une seule fois.
+3. **Se connecter** : YouTube Music n'a pas de connexion officielle pour les applications, MixLab réutilise donc la session du navigateur. Sur music.youtube.com (connecté), ouvrez les outils de développement → Réseau → filtre `browse`, cliquez sur « Bibliothèque », puis copiez les en-têtes de requête d'une requête POST `browse` (Chrome : clic droit → Copier → Copier les en-têtes de requête ; Firefox : bouton « Brut »). Collez-les dans MixLab. Les cookies sont enregistrés dans `ytmusic/browser.json` et `ytmusic/cookies.txt`, lisibles seulement par votre compte utilisateur.
+4. **Récupérer** : cochez des morceaux et cliquez sur « Récupérer ». Les téléchargements tournent en arrière-plan (deux à la fois), avec leur progression dans la bibliothèque. Titre, artiste, album et pochette carrée viennent de YouTube Music. Un morceau déjà récupéré n'est pas retéléchargé.
+
+Si YouTube bloque les téléchargements (erreur 403, « signature », « challenge »), utilisez **Mettre à jour yt-dlp et ytmusicapi** dans le menu `…` de la fenêtre : YouTube change souvent, et yt-dlp suit. Si la session expire, reconnectez-vous avec de nouveaux en-têtes.
+
+**Implémentation** : `src/main/ytmusic/bridge.py` est un processus Python persistant qui dialogue en JSON lignes avec le processus principal (`src/main/ytmusic/ytmusic.ts`) ; il est embarqué dans le bundle comme texte et écrit à côté du venv au lancement, car Python ne peut pas lire un fichier dans `app.asar`. Les fichiers récupérés passent ensuite par le chemin d'import habituel (`importPaths`), donc empreinte, cache et analyse sont inchangés. Tests : `npm run test:ytmusic` (fonctions du pont, sans réseau) et `tests/e2e/ytmusic.spec.ts` (parcours complet sur un faux backend, `MIXLAB_YTM_FAKE=1`).
+
 ## Architecture
 
 ```

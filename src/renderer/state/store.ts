@@ -21,7 +21,7 @@ export interface Toast {
   detail?: string;
 }
 
-export type ModalName = 'generate' | 'export' | 'settings' | null;
+export type ModalName = 'generate' | 'export' | 'settings' | 'ytmusic' | null;
 
 interface State {
   info: AppInfo | null;

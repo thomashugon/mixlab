@@ -14,6 +14,8 @@ import { Inspector } from './components/Inspector';
 import { PlayerBar } from './components/PlayerBar';
 import { Toolbar } from './components/Toolbar';
 import { GenerateModal, ExportModal, SettingsModal, Toasts } from './components/Modals';
+import { YouTubeMusicModal } from './components/YouTubeMusic';
+import { useYtm } from './state/ytmStore';
 
 function useBootstrap() {
   useEffect(() => {
@@ -27,6 +29,7 @@ function useBootstrap() {
       window.mixlab.onAnalysisProgress((e) => useStore.getState().onProgress(e.id, e.progress)),
       window.mixlab.onAnalysisDone((e) => useStore.getState().onDone(e.id, e.meta, e.analysis, e.cacheDir, e.coverUrl)),
       window.mixlab.onAnalysisError((e) => useStore.getState().onError(e.id, e.error)),
+      window.mixlab.ytm.onDownload((e) => useYtm.getState().onEvent(e)),
       window.mixlab.onExportProgress((e) => { if (e.id === useExport.getState().id) useExport.getState().set({ frames: e.frames, totalFrames: e.totalFrames, stage: e.stage }); }),
       window.mixlab.onExportDone((e) => {
         if (e.id !== useExport.getState().id) return;
@@ -107,6 +110,7 @@ export function App() {
       case 'import': await s.importPaths(await window.mixlab.pickAudioFiles()); break;
       case 'export': if (s.active().entries.length) s.setModal('export'); break;
       case 'generate': s.setModal('generate'); break;
+      case 'ytmusic': s.setModal('ytmusic'); break;
       case 'play': player().toggle(); break;
     }
   }), []);
@@ -216,6 +220,7 @@ export function App() {
       <GenerateModal />
       <ExportModal />
       <SettingsModal />
+      <YouTubeMusicModal />
       <Toasts />
     </div>
   );

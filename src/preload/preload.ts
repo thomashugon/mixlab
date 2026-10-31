@@ -8,6 +8,22 @@ function on<T>(channel: string, cb: (e: T) => void): () => void {
 }
 
 const api: MixlabApi = {
+  ytm: {
+    status: () => ipcRenderer.invoke('ytm:status'),
+    setup: (upgrade) => ipcRenderer.invoke('ytm:setup', !!upgrade),
+    onSetup: (cb) => on('ytm:setup', cb),
+    login: (headers) => ipcRenderer.invoke('ytm:call', 'login', { headers }),
+    logout: () => ipcRenderer.invoke('ytm:call', 'logout'),
+    account: () => ipcRenderer.invoke('ytm:call', 'account'),
+    versions: () => ipcRenderer.invoke('ytm:call', 'versions'),
+    playlists: () => ipcRenderer.invoke('ytm:call', 'playlists'),
+    playlist: (id) => ipcRenderer.invoke('ytm:call', 'playlist', { id }),
+    search: (q) => ipcRenderer.invoke('ytm:call', 'search', { q }),
+    download: (tracks) => ipcRenderer.invoke('ytm:call', 'download', { tracks }),
+    cancel: () => ipcRenderer.invoke('ytm:call', 'cancel'),
+    onDownload: (cb) => on('ytm:download', cb),
+    revealAudio: () => ipcRenderer.invoke('ytm:reveal'),
+  },
   info: () => ipcRenderer.invoke('app:info'),
   pickAudioFiles: () => ipcRenderer.invoke('library:pick'),
   pathForFile: (file) => webUtils.getPathForFile(file),

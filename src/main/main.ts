@@ -13,12 +13,15 @@ import type { MixPlan } from '../core/mix/plan';
 import type { ExportOptions } from '../core/export/exporter';
 import type { InspectedFile } from '../shared/api';
 import type { ProjectFile } from '../core/types';
+import { YouTubeMusic } from './ytmusic/ytmusic';
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 if (process.env.MIXLAB_USER_DATA) app.setPath('userData', process.env.MIXLAB_USER_DATA);
 const cacheRoot = () => path.join(app.getPath('userData'), 'cache');
 const bundledFfmpegDir = () => (app.isPackaged ? path.join(process.resourcesPath, 'bin') : undefined);
 const workerFile = path.join(__dirname, 'workers.js');
+const ytmDir = () => process.env.MIXLAB_YTM_DIR || path.join(app.getPath('userData'), 'ytmusic');
+let ytm: YouTubeMusic | null = null;
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'mixlab-media', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
@@ -88,6 +91,7 @@ function buildMenu() {
         { label: 'Enregistrer sous…', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendMenu('save-as') },
         { type: 'separator' },
         { label: 'Importer des morceaux…', accelerator: 'CmdOrCtrl+I', click: () => sendMenu('import') },
+        { label: 'Importer depuis YouTube Music…', accelerator: 'CmdOrCtrl+Shift+I', click: () => sendMenu('ytmusic') },
         { label: 'Exporter la mixtape…', accelerator: 'CmdOrCtrl+E', click: () => sendMenu('export') },
         ...(mac ? [] : [{ type: 'separator' as const }, { role: 'quit' as const, label: 'Quitter' }]),
       ],
@@ -306,6 +310,29 @@ function registerIpc() {
     return Object.fromEntries(relink(missing, r.filePaths[0]));
   });
   ipcMain.handle('shell:reveal', (_e, p: string) => shell.showItemInFolder(p));
+
+  // YouTube Music (ytmusicapi + yt-dlp in a private Python environment)
+  const ytmCommands = new Set(['login', 'logout', 'account', 'versions', 'playlists', 'playlist', 'search', 'download', 'cancel']);
+  ytm = new YouTubeMusic({
+    dir: ytmDir(),
+    ffmpegDir: () => {
+      try {
+        const f = findFfmpeg(bundledFfmpegDir() ? [bundledFfmpegDir()!] : []).ffmpeg;
+        return path.isAbsolute(f) ? path.dirname(f) : undefined;
+      } catch { return undefined; }
+    },
+    send: (channel, payload) => win?.webContents.send(channel, payload),
+  });
+  ipcMain.handle('ytm:status', () => ytm!.status());
+  ipcMain.handle('ytm:setup', (_e, upgrade: boolean) => ytm!.setup(upgrade));
+  ipcMain.handle('ytm:call', (_e, cmd: string, args?: Record<string, unknown>) => {
+    if (!ytmCommands.has(cmd)) throw new Error('Commande inconnue');
+    return ytm!.call(cmd, args);
+  });
+  ipcMain.handle('ytm:reveal', () => {
+    fs.mkdirSync(ytm!.audioDir, { recursive: true });
+    return shell.openPath(ytm!.audioDir);
+  });
   ipcMain.on('app:dirty', (_e, d: boolean) => {
     dirty = d;
     win?.setDocumentEdited(d);
@@ -333,6 +360,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   for (const w of [...idle, ...busy]) w.terminate();
   preview?.terminate();
+  ytm?.stop();
   for (const w of exports.values()) { w.postMessage({ type: 'cancel' }); }
   app.quit();
 });

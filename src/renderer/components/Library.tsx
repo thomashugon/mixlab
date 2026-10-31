@@ -2,6 +2,8 @@ import { memo, useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { AlertTriangle, FolderSearch, ListPlus, MoreHorizontal, Music2, Plus, Search, SlidersHorizontal, Trash2, Upload, FileQuestion } from 'lucide-react';
 import { useStore } from '../state/store';
+import { isActive, useYtm } from '../state/ytmStore';
+import { YtmGlyph } from './YouTubeMusic';
 import { Chip, IconButton, ProgressRing, Tooltip, useContextMenu, EmptyState, Button } from './ui';
 import { fmtBpm, fmtTime, keyColor, plural } from '../lib/format';
 import type { LibraryTrack, TrackAnalysis } from '../../core/types';
@@ -119,6 +121,9 @@ export function Library() {
   const toast = useStore((s) => s.toast);
   const mixtape = useStore((s) => s.mixtapes.find((m) => m.id === s.activeId));
   const isMac = useStore((s) => s.info?.platform === 'darwin');
+  const ytmItems = useYtm((s) => s.items);
+  const ytmActive = useMemo(() => Object.values(ytmItems).filter(isActive), [ytmItems]);
+  const setModal = useStore((s) => s.setModal);
   const menu = useContextMenu();
   const [sort, setSort] = useState<'added' | 'bpm' | 'key' | 'title'>('added');
 
@@ -158,6 +163,7 @@ export function Library() {
         </div>
         <div className="panel-actions">
           <IconButton label="Importer des morceaux (⌘I)" onClick={pick}><Plus size={17} /></IconButton>
+          <IconButton label="Importer depuis YouTube Music (⇧⌘I)" onClick={() => setModal('ytmusic')} data-testid="ytm-open"><YtmGlyph size={17} /></IconButton>
           <IconButton
             label="Options de la bibliothèque"
             onClick={(e) => menu.open(e, [
@@ -185,6 +191,16 @@ export function Library() {
         </div>
       )}
 
+      {ytmActive.length > 0 && (
+        <div className="import-progress" role="status" data-testid="ytm-progress">
+          <div className="import-progress-head">
+            <span>YouTube Music · {ytmActive.length} en cours</span>
+            <button className="ytm-progress-link" onClick={() => setModal('ytmusic')}>Voir</button>
+          </div>
+          <div className="bar"><span style={{ width: `${(ytmActive.reduce((a, i) => a + i.progress, 0) / ytmActive.length) * 100}%` }} /></div>
+        </div>
+      )}
+
       {missing.length > 0 && (
         <div className="banner banner-warn">
           <FileQuestion size={15} />
@@ -208,6 +224,7 @@ export function Library() {
             <h3>Déposez vos morceaux ici</h3>
             <p>MP3 (et WAV, FLAC, AAC) — plusieurs fichiers ou un dossier entier. Tout est analysé sur votre ordinateur.</p>
             <Button variant="glass" size="sm">Parcourir…</Button>
+            <Button variant="ghost" size="sm" icon={<YtmGlyph size={14} />} onClick={(e) => { e.stopPropagation(); setModal('ytmusic'); }}>YouTube Music…</Button>
           </div>
         ) : list.length === 0 ? (
           <EmptyState icon={<Search size={20} />} title="Aucun résultat">Aucun morceau ne correspond à « {search} ».</EmptyState>

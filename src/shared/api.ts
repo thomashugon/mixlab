@@ -35,7 +35,74 @@ export interface OpenedProject {
   exists: Record<string, boolean>;
 }
 
+// ---------- YouTube Music ----------
+
+export interface YtmStatus {
+  python: { ok: true; version?: string } | { ok: false; error: string };
+  /** ytmusicapi, yt-dlp and deno are installed in MixLab's private environment. */
+  installed: boolean;
+  connected: boolean;
+  audioDir: string;
+  fake: boolean;
+}
+
+export interface YtmSetupState {
+  stage: 'install' | 'done' | 'error';
+  line: string;
+}
+
+export interface YtmAccount {
+  name: string;
+  handle: string;
+  photo: string | null;
+}
+
+export interface YtmPlaylist {
+  id: string;
+  title: string;
+  count: number | string | null;
+  thumbnail: string | null;
+}
+
+export interface YtmTrack {
+  videoId: string;
+  title: string;
+  artists: string;
+  album: string;
+  duration: number | null;
+  thumbnail: string | null;
+  available: boolean;
+  downloaded: boolean;
+}
+
+export interface YtmDownloadEvent {
+  videoId: string;
+  status: 'queued' | 'downloading' | 'done' | 'error' | 'cancelled';
+  progress?: number;
+  path?: string;
+  error?: string;
+}
+
+export interface YtmApi {
+  status(): Promise<YtmStatus>;
+  setup(upgrade?: boolean): Promise<void>;
+  onSetup(cb: (e: YtmSetupState) => void): () => void;
+  login(headers: string): Promise<YtmAccount>;
+  logout(): Promise<void>;
+  account(): Promise<YtmAccount>;
+  versions(): Promise<Record<string, string>>;
+  playlists(): Promise<YtmPlaylist[]>;
+  playlist(id: string): Promise<{ title: string; tracks: YtmTrack[] }>;
+  search(q: string): Promise<YtmTrack[]>;
+  download(tracks: YtmTrack[]): Promise<void>;
+  cancel(): Promise<void>;
+  onDownload(cb: (e: YtmDownloadEvent) => void): () => void;
+  revealAudio(): Promise<void>;
+}
+
 export interface MixlabApi {
+  ytm: YtmApi;
+
   info(): Promise<AppInfo>;
   pickAudioFiles(): Promise<string[]>;
   pathForFile(file: File): string;

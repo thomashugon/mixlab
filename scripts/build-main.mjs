@@ -10,6 +10,8 @@ const common = {
   sourcemap: true,
   external: ['electron'],
   outdir: 'dist/main',
+  // The YouTube Music helper (Python) is embedded as text: a file inside app.asar cannot be run by Python.
+  loader: { '.py': 'text' },
   logLevel: 'info',
 };
 const entries = {
